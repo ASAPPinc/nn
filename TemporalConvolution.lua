@@ -14,8 +14,16 @@ function TemporalConvolution:__init(inputFrameSize, outputFrameSize, kW, dW)
    self.bias = torch.Tensor(outputFrameSize)
    self.gradWeight = torch.Tensor(outputFrameSize, inputFrameSize*kW)
    self.gradBias = torch.Tensor(outputFrameSize)
-   
+
    self:reset()
+end
+
+function TemporalConvolution:clearState()
+   for _, buffer in ipairs({'Input', 'OutputSized', 'GradInput', 'SpatialWeightSized'}) do
+      local bufferName = 'spatial' .. buffer
+      if self[bufferName] then self[bufferName]:set() end
+   end
+   return parent.clearState(self)
 end
 
 function TemporalConvolution:reset(stdv)
@@ -38,32 +46,53 @@ function TemporalConvolution:reset(stdv)
 end
 
 function TemporalConvolution:updateOutput(input)
+    self.finput = self.finput or input.new()
+    self.fgradInput = self.fgradInput or input.new()
+
+    self.spatialInput = self.spatialInput or input.new()
+    self.spatialOutputSized = self.spatialOutputSized or input.new()
+    self.spatialWeightSized = self.spatialWeightSized or input.new()
+
     input.THNN.TemporalConvolution_updateOutput(
-	input:cdata(), self.output:cdata(),
-	self.weight:cdata(), self.bias:cdata(),
-	self.kW, self.dW,
-	self.inputFrameSize, self.outputFrameSize
+      input:cdata(), self.output:cdata(),
+      self.weight:cdata(), self.bias:cdata(),
+      self.finput:cdata(), self.fgradInput:cdata(),
+      self.spatialInput:cdata(), self.spatialOutputSized:cdata(),
+      self.spatialWeightSized:cdata(),
+      self.kW, self.dW,
+      self.inputFrameSize, self.outputFrameSize
     )
    return self.output
 end
 
 function TemporalConvolution:updateGradInput(input, gradOutput)
    if self.gradInput then
+      self.spatialInput = self.spatialInput or input.new()
+      self.spatialOutputSized = self.spatialOutputSized or input.new()
+      self.spatialGradInput = self.spatialGradInput or input.new()
+      self.spatialWeightSized = self.spatialWeightSized or input.new()
       input.THNN.TemporalConvolution_updateGradInput(
-	  input:cdata(), gradOutput:cdata(),
-	  self.gradInput:cdata(), self.weight:cdata(),
-	  self.kW, self.dW
-       )
+        input:cdata(), gradOutput:cdata(),
+        self.gradInput:cdata(), self.weight:cdata(),
+        self.spatialInput:cdata(), self.spatialOutputSized:cdata(), self.spatialGradInput:cdata(),
+        self.spatialWeightSized:cdata(),
+        self.kW, self.dW
+      )
       return self.gradInput
    end
 end
 
 function TemporalConvolution:accGradParameters(input, gradOutput, scale)
    scale = scale or 1
+   self.spatialInput = self.spatialInput or input.new()
+   self.spatialOutputSized = self.spatialOutputSized or input.new()
+   self.spatialWeightSized = self.spatialWeightSized or input.new()
    input.THNN.TemporalConvolution_accGradParameters(
-       input:cdata(), gradOutput:cdata(),
-       self.gradWeight:cdata(), self.gradBias:cdata(),
-       self.kW, self.dW, scale
+     input:cdata(), gradOutput:cdata(),
+     self.gradWeight:cdata(), self.gradBias:cdata(),
+     self.spatialInput:cdata(), self.spatialOutputSized:cdata(),
+     self.spatialWeightSized:cdata(),
+     self.kW, self.dW, scale
    )
 end
 

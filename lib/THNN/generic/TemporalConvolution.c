@@ -8,6 +8,11 @@ void THNN_(TemporalConvolution_updateOutput)(
           THTensor *output,
           THTensor *weight,
           THTensor *bias,
+          THTensor *finput,
+          THTensor *fgradinput,
+          THTensor *spatialInput,
+          THTensor *spatialOutputSized,
+          THTensor *spatialWeightSized,
           int kW,
           int dW,
           int inputFrameSize,
@@ -136,6 +141,10 @@ void THNN_(TemporalConvolution_updateGradInput)(
           THTensor *gradOutput,
           THTensor *gradInput,
           THTensor *weight,
+          THTensor *spatialInput,
+          THTensor *spatialGradOutputSized,
+          THTensor *spatialGradInput,
+          THTensor *spatialWeightSized,
           int kW,
           int dW)
 {
@@ -235,6 +244,9 @@ void THNN_(TemporalConvolution_accGradParameters)(
           THTensor *gradOutput,
           THTensor *gradWeight,
           THTensor *gradBias,
+          THTensor *spatialInput,
+          THTensor *spatialGradOutputSized,
+          THTensor *spatialWeightSized,
           int kW,
           int dW,
           real scale)
